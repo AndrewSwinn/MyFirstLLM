@@ -8,7 +8,7 @@ config = configparser.ConfigParser()
 config.read(os.path.join(os.getcwd(), 'config.ini'))
 data_dir = config.get('directories', 'shakespeare')
 
-device = 'cpu' if torch.cuda.is_available() else 'cpu'
+device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Load data files
 data_files = {'Train': 'train.csv', 'Test': 'test.csv', 'Val': 'validation.csv'}
