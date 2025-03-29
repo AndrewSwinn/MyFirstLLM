@@ -10,7 +10,7 @@ source /home/bwc/ams90/miniconda3/etc/profile.d/conda.sh
 conda activate torchenv
 
 # Define your commands
-COMMANDS=("python Bigram.py"
+COMMANDS=("python Bigram.py")
 
 num_jobs=${#COMMANDS[@]}
 
