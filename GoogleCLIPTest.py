@@ -1,7 +1,10 @@
 import os
 import requests
+import time
 from   PIL import Image
 from   io import BytesIO
+
+import threading
 
 import   duckduckgo_search as duck
 
@@ -9,10 +12,12 @@ import matplotlib.pyplot as plt
 from   matplotlib.backend_bases import KeyEvent
 from   matplotlib.widgets       import TextBox
 
-from transformers import CLIPProcessor, CLIPModel
+#from transformers import CLIPProcessor, CLIPModel
 from transformers import BlipProcessor, BlipForConditionalGeneration
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
+
+print('Imports Complete')
 
 # Load the model and processor
 #model     = CLIPModel.from_pretrained("openai/clip-vit-base-patch32")
@@ -41,16 +46,37 @@ class ImageViewer:
 
         self.create_axes()
 
+        # Start background process
+        self.search = False
+        thread = threading.Thread(target=self.background_work, daemon=True)
+        thread.start()
+
         # Display the plot
         plt.show()
 
+    def background_work(self):
+
+        while True:
+            if self.search:
+                results = duck.DDGS().images(keywords=self.query_string, max_results=10)
+                self.zquery(results)
+                print('Done')
+                self.search = False
+            time.sleep(0.5)
 
     def query(self, query):
+        print('submit')
+        self.query_string = query
+        self.search = True
+
+
+    def zquery(self, results):
 
         self.index = 0
         self.images_list = []
+        self.descriptions_list = []
 
-        results = duck.DDGS().images(keywords=query, max_results=10)
+
 
         for i, result in enumerate(results):
             image_url = result['image']
@@ -60,17 +86,24 @@ class ImageViewer:
                 response.raise_for_status()
                 image = Image.open(BytesIO(response.content))
                 self.images_list.append(image)
+
+                inputs = processor(image, return_tensors="pt")
+                out = model.generate(**inputs)
+                caption = processor.decode(out[0], skip_special_tokens=True)
+                self.descriptions_list.append(caption)
+
+
             except:
                 pass
 
-        update_screen()
 
-        self.ax['B'].imshow(self.images_list[self.index])
 
-        self.fig.canvas.draw()
 
     def update_screen(self):
-        ,         self.ax['B'].imshow(self.images_list[self.index])
+
+        self.ax['B'].imshow(self.images_list[self.index])
+        self.ax['B'].set_title(self.descriptions_list[self.index])
+
         self.fig.canvas.draw()
 
 
@@ -93,30 +126,19 @@ class ImageViewer:
 
     def on_key_press(self, event: KeyEvent):
         """Handles key press events to navigate through the images."""
+        update = False
         if event.key == 'right':  # Right arrow key
             self.index = self.index + 1 # Go to next image
             if self.index == len(self.images_list): self.index = 0
+            update=True
 
 
         elif event.key == 'left':  # Left arrow key
             self.index = self.index - 1  # Go to previous image
             if self.index == - 1: self.index = len(self.images_list) - 1
+            update=True
 
-        elif event.key == 'up':  # Up arrow key
-            self.class_id = self.class_id - 1  # Go to next class
-            if self.class_id == 0: self.class_id = 200
-            self.images_list = self.get_indexes(self.class_id)
-            self.index = 0
-
-        elif event.key == 'down':  # Down arrow key
-            self.class_id = self.class_id + 1  # Go to previous class
-            if self.class_id == 201: self.class_id = 1
-            self.images_list = self.get_indexes(self.class_id)
-            self.index = 0
-
-        self.ax['B'].imshow(self.images_list[self.index])
-        # Redraw the canvas
-        self.fig.canvas.draw()
+        if update: self.update_screen()
 
 
 # Create and run the viewer
