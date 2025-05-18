@@ -2,13 +2,19 @@ import os
 import requests
 import time
 import pickle
-from   collections import deque
-from PIL import Image, ImageChops
-from   io import BytesIO
+import argparse
 
+from   collections import deque
+from   PIL import Image, ImageChops
+from   io import BytesIO
+from   transformers import BlipProcessor, BlipForConditionalGeneration
 import   duckduckgo_search as duck
 
-from transformers import BlipProcessor, BlipForConditionalGeneration
+parser = argparse.ArgumentParser()
+parser.add_argument("-q", "--query", type=str, help="Root query")
+
+
+
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
@@ -71,6 +77,9 @@ class node:
 
 if __name__ == "__main__":
 
+    args  = parser.parse_args()
+    query = args.query
+
     #Load Blip Models
     try:
         model = BlipForConditionalGeneration.from_pretrained("blip-captioning-base-model")
@@ -85,7 +94,7 @@ if __name__ == "__main__":
     visited = []
     results = []
 
-    root = node(0,  -1, 'dog', ' ', None)
+    root = node(0,  -1, query, ' ', None)
 
     stack = deque()
     stack.append(root)
@@ -100,5 +109,5 @@ if __name__ == "__main__":
                     stack.append(leaf)
                     visited.append(leaf)
 
-            with open('file.pkl', 'wb') as file:
+            with open(query + '.pkl', 'wb') as file:
                 pickle.dump(visited, file)
